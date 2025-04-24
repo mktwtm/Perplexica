@@ -1,25 +1,22 @@
-name: Docker Image CI
+name: Build & Push Docker Image
 
+# dispara em push e PR na master
 on:
   push:
     branches: [master]
   pull_request:
     branches: [master]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Puxa o código
+      # 1) Pull do código
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2) Registra QEMU para emulação de outras arquiteturas
+      # 2) Registra QEMU para emulação
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -27,19 +24,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # 4) Faz login no Docker Hub usando os secrets
+      # 4) Login no Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 5) Constrói e envia a imagem multi-plataforma
+      # 5) Build + Push multi-arch
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: docker/Dockerfile           # ajuste caso seu Dockerfile esteja em outro caminho
+          file: ./docker/Dockerfile      # ajuste se o seu Dockerfile estiver em outro caminho
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: wtmarketing/perplexica:latest
+          tags: |
+            wtmarketing/perplexica:latest
+            wtmarketing/perplexica:${{ github.sha }}
